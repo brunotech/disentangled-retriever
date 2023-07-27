@@ -163,7 +163,7 @@ def main():
 
     if is_main_process(eval_args.local_rank):
         os.makedirs(data_args.out_query_dir, exist_ok=True)
-        index = create_index(corpus_embeds, single_gpu_id=0 if eval_args.local_rank < 0 else eval_args.local_rank)
+        index = create_index(corpus_embeds, single_gpu_id=max(eval_args.local_rank, 0))
         search_and_compute_metrics(index, corpus_ids, query_embeds, query_ids, out_metric_path, data_args.out_query_dir, data_args.qrel_path, eval_args)        
 
 

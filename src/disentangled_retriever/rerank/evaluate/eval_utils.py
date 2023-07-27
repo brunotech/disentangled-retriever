@@ -36,11 +36,10 @@ def load_corpus(corpus_path, verbose=True):
     corpus = {}
     for line in tqdm(open(corpus_path), mininterval=10, disable=not verbose):
         splits = line.split("\t")
-        if len(splits) == 2: # msmarco passage
-            corpus_id, text = splits
-            corpus[corpus_id] = text.strip()
-        else: # msmarco doc 
+        if len(splits) != 2:
             raise NotImplementedError()
+        corpus_id, text = splits
+        corpus[corpus_id] = text.strip()
     return corpus
 
 
@@ -91,7 +90,7 @@ class RerankEvaluater(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        assert prediction_loss_only == False
+        assert not prediction_loss_only
         assert ignore_keys is None
         inputs = self._prepare_inputs(inputs)
         with torch.no_grad():
@@ -111,9 +110,7 @@ def rerank(
     logger.info("Encoding Queries...")
     pair_ids = []
     for qid, pids in candidates.items():
-        for pid in pids:
-            pair_ids.append((qid, pid))
-
+        pair_ids.extend((qid, pid) for pid in pids)
     if re.search("[\u4e00-\u9FFF]", list(corpus.values())[0]):
         logger.info("Automatically detect the corpus is in chinese and will use len(str) to sort the corpus for efficiently encoding")
         pair_ids = sorted(pair_ids, key=lambda x: len(queries[x[0]])+len(corpus[x[1]]), reverse=True)

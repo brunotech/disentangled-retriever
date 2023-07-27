@@ -87,7 +87,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if is_main_process(training_args.local_rank) else logging.WARN,
     )
-    
+
     resume_from_checkpoint = False
     if (
             os.path.exists(training_args.output_dir)
@@ -108,8 +108,10 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        (
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
+        )
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
@@ -151,8 +153,8 @@ def main():
                 model.base_model.embeddings.load_state_dict(torch.load(embedding_path, map_location="cpu")) 
                 logger.info(f"Overwrite embedding: {embedding_path}")
             else:
-                logger.info(f"No new embedding available for overwriting.")
-                
+                logger.info("No new embedding available for overwriting.")
+
             if not training_args.not_train_embedding:
                 for n, param in model.base_model.embeddings.named_parameters():
                     param.requires_grad = True
@@ -170,7 +172,7 @@ def main():
         logger.info(f"Parameters with gradient: {[n for n, p in model.named_parameters() if p.requires_grad]}")
         adapter_param_cnt = sum(p.numel() for p in model.parameters() if p.requires_grad)
         logger.info(f"adapter_param_cnt:{adapter_param_cnt}, model_param_cnt:{model_param_cnt}, ratio:{adapter_param_cnt/model_param_cnt:.4f}")
-    
+
     logger.info(f"Trainer Class: {trainer_class}")
     all_model_param_cnt = sum(p.numel() for p in model.parameters())
     optimize_param_cnt = sum(p.numel() for p in model.parameters() if p.requires_grad)

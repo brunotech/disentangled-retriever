@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def truncate_run(run: Dict[str, Dict[str, float]], topk: int):
-    new_run = dict()
+    new_run = {}
     for qid, pid2scores in run.items():
         rank_lst = sorted(pid2scores.items(), key=lambda x: x[1], reverse=True)
         new_run[qid] = dict(rank_lst[:topk])
@@ -43,26 +43,26 @@ def pytrec_evaluate(
     evaluator = pytrec_eval.RelevanceEvaluator(
         qrel, {map_string, ndcg_string, recall_string, precision_string}, relevance_level=relevance_level)
     query_scores = evaluator.evaluate(run)
-    
+
     for query_id in query_scores.keys():
         for k in k_values:
-            ndcg[f"NDCG@{k}"] += query_scores[query_id]["ndcg_cut_" + str(k)]
-            map[f"MAP@{k}"] += query_scores[query_id]["map_cut_" + str(k)]
-            precision[f"P@{k}"] += query_scores[query_id]["P_"+ str(k)]
+            ndcg[f"NDCG@{k}"] += query_scores[query_id][f"ndcg_cut_{str(k)}"]
+            map[f"MAP@{k}"] += query_scores[query_id][f"map_cut_{str(k)}"]
+            precision[f"P@{k}"] += query_scores[query_id][f"P_{str(k)}"]
         for k in recall_k_values:
-            recall[f"Recall@{k}"] += query_scores[query_id]["recall_" + str(k)]
-    
+            recall[f"Recall@{k}"] += query_scores[query_id][f"recall_{str(k)}"]
+
     if len(query_scores) < len(qrel):
         missing_qids = qrel.keys() - query_scores.keys()
         logger.warning(f"Missing results for {len(missing_qids)} queries!")
         for query_id in missing_qids:
-            query_scores[query_id] = dict()
+            query_scores[query_id] = {}
             for k in k_values:
-                query_scores[query_id]["ndcg_cut_" + str(k)] = 0
-                query_scores[query_id]["map_cut_" + str(k)] = 0
-                query_scores[query_id]["P_"+ str(k)] = 0
+                query_scores[query_id][f"ndcg_cut_{str(k)}"] = 0
+                query_scores[query_id][f"map_cut_{str(k)}"] = 0
+                query_scores[query_id][f"P_{str(k)}"] = 0
             for k in recall_k_values:
-                query_scores[query_id]["recall_" + str(k)] = 0
+                query_scores[query_id][f"recall_{str(k)}"] = 0
 
     for k in k_values:
         ndcg[f"NDCG@{k}"] = round(ndcg[f"NDCG@{k}"]/len(query_scores), 5)

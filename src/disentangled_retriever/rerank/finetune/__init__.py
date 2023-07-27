@@ -35,11 +35,10 @@ def load_corpus(corpus_path, verbose=True):
     corpus = {}
     for line in tqdm(open(corpus_path), mininterval=10, disable=not verbose):
         splits = line.split("\t")
-        if len(splits) == 2: # msmarco passage
-            corpus_id, text = splits
-            corpus[corpus_id] = text.strip()
-        else: # msmarco doc 
+        if len(splits) != 2:
             raise NotImplementedError()
+        corpus_id, text = splits
+        corpus[corpus_id] = text.strip()
     return corpus
 
 
@@ -84,7 +83,7 @@ class RerankEvaluater(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        assert prediction_loss_only == False
+        assert not prediction_loss_only
         assert ignore_keys is None
         inputs = self._prepare_inputs(inputs)
         with torch.no_grad():
@@ -104,8 +103,7 @@ def rerank(
     logger.info("Encoding Queries...")
     pair_ids = []
     for qid, pids in candidates.items():
-        for pid in pids:
-            pair_ids.append((qid, pid))
+        pair_ids.extend((qid, pid) for pid in pids)
     # pair_ids = sum([[(qid, pid) for pid in pids] for qid, pids in candidates.items()], [])
     pair_ids = sorted(pair_ids, key=lambda x: len(queries[x[0]])+len(corpus[x[1]]), reverse=True)
     dataset = EvalRerankDataset(queries, corpus, pair_ids)
@@ -128,12 +126,7 @@ def rerank(
 
 def concat_title_body(doc: Dict[str, str]):
     body = doc['text'].strip()
-    if "title" in doc and len(doc['title'].strip())> 0:
-        title = doc['title'].strip()
-        if title[-1] in "!.?。！？":
-            text = title + " " + body
-        else:
-            text = title + ". " + body
-    else:
-        text = body
-    return text
+    if "title" not in doc or len(doc['title'].strip()) <= 0:
+        return body
+    title = doc['title'].strip()
+    return f"{title} {body}" if title[-1] in "!.?。！？" else f"{title}. {body}"

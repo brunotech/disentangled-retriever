@@ -16,7 +16,10 @@ import argparse
 def load_doclens(directory, flatten=True):
     parts, _, _ = get_parts(directory)
 
-    doclens_filenames = [os.path.join(directory, 'doclens.{}.json'.format(filename)) for filename in parts]
+    doclens_filenames = [
+        os.path.join(directory, f'doclens.{filename}.json')
+        for filename in parts
+    ]
     all_doclens = [ujson.load(open(filename)) for filename in doclens_filenames]
 
     if flatten:
@@ -38,7 +41,7 @@ def grouper(iterable, n, fillvalue=None):
 
 def print_message(*s, condition=True):
     s = ' '.join([str(x) for x in s])
-    msg = "[{}] {}".format(datetime.datetime.now().strftime("%b %d, %H:%M:%S"), s)
+    msg = f'[{datetime.datetime.now().strftime("%b %d, %H:%M:%S")}] {s}'
 
     if condition:
         print(msg, flush=True)
@@ -227,8 +230,12 @@ def get_parts(directory):
     assert list(range(len(parts))) == parts, parts
 
     # Integer-sortedness matters.
-    parts_paths = [os.path.join(directory, '{}{}'.format(filename, extension)) for filename in parts]
-    samples_paths = [os.path.join(directory, '{}.sample'.format(filename)) for filename in parts]
+    parts_paths = [
+        os.path.join(directory, f'{filename}{extension}') for filename in parts
+    ]
+    samples_paths = [
+        os.path.join(directory, f'{filename}.sample') for filename in parts
+    ]
 
     return parts, parts_paths, samples_paths
 
@@ -364,8 +371,11 @@ def main():
         args.partitions = 1 << math.ceil(math.log2(8 * math.sqrt(num_embeddings)))
         print('\n\n')
         print("You did not specify --partitions!")
-        print("Default computation chooses", args.partitions,
-                    "partitions (for {} embeddings)".format(num_embeddings))
+        print(
+            "Default computation chooses",
+            args.partitions,
+            f"partitions (for {num_embeddings} embeddings)",
+        )
         print('\n\n')
 
     index_faiss(args)

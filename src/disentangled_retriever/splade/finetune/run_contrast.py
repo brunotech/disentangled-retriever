@@ -80,7 +80,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if is_main_process(training_args.local_rank) else logging.WARN,
     )
-    
+
     resume_from_checkpoint = False
     if (
             os.path.exists(training_args.output_dir)
@@ -101,8 +101,10 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        (
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
+        )
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
@@ -171,7 +173,7 @@ def main():
         max_doc_len = data_args.max_doc_len,
     )
     eval_dataset = None
-    
+
     # Initialize our Trainer
     trainer = trainer_class(
         qrels=train_set.get_qrels(),

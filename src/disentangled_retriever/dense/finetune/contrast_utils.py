@@ -65,21 +65,23 @@ class FinetuneCollator:
 
         if 'neg_docs' in features[0]:
             neg_doc_input = self.tokenizer(
-                sum([x['neg_docs'] for x in features], []),
+                sum((x['neg_docs'] for x in features), []),
                 padding=self.padding,
                 return_tensors='pt',
                 add_special_tokens=True,
                 return_attention_mask=True,
                 return_token_type_ids=True,
                 truncation=True,
-                max_length=self.max_doc_len
-            )     
+                max_length=self.max_doc_len,
+            )
             neg_doc_input['position_ids'] = torch.arange(0, neg_doc_input['input_ids'].size(1))[None, :]
-            neg_docids = torch.tensor(sum([x['neg_docids'] for x in features], []), dtype=torch.long)  
-            batch_data.update({
+            neg_docids = torch.tensor(
+                sum((x['neg_docids'] for x in features), []), dtype=torch.long
+            )
+            batch_data |= {
                 "neg_doc_input": neg_doc_input,
                 "neg_docids": neg_docids,
-            }) 
+            }
         return batch_data
 
 
@@ -101,13 +103,13 @@ class QDRelDataset(Dataset):
         '''
         super().__init__()
         self.tokenizer = tokenizer
-        self.queries, qid2offset = [], dict()
+        self.queries, qid2offset = [], {}
         for idx, line in enumerate(tqdm(open(query_path), disable=not verbose, mininterval=10)):
             qid, query = line.split("\t")
             qid2offset[qid] = idx
             self.queries.append(query.strip())
 
-        self.corpus, docid2offset = [], dict()
+        self.corpus, docid2offset = [], {}
         for idx, line in enumerate(tqdm(open(corpus_path), disable=not verbose, mininterval=10)):
             splits = line.split("\t")
             if len(splits) == 2:
@@ -124,7 +126,7 @@ class QDRelDataset(Dataset):
                 qoffset = qid2offset[qid]
                 docoffset = docid2offset[docid]
                 self.qrels[qoffset].append(docoffset)
-        
+
         if os.path.exists(negative):
             self.negative = {}
             for line in tqdm(open(negative), disable=not verbose, mininterval=10, desc="read negatives"):
@@ -174,7 +176,7 @@ class QDRelDataset(Dataset):
             else:
                 raise NotImplementedError()
             neg_docs = [self.corpus[neg_docid] for neg_docid in neg_docids ]
-            data.update({"neg_docids": neg_docids, "neg_docs": neg_docs})
+            data |= {"neg_docids": neg_docids, "neg_docs": neg_docs}
         return data
 
 

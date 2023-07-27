@@ -94,7 +94,7 @@ def main():
             model.base_model.embeddings.load_state_dict(torch.load(embedding_path, map_location="cpu")) 
             logger.info(f"Overwrite embedding: {embedding_path}")
         else:
-            logger.info(f"No new embedding available for overwriting.")
+            logger.info("No new embedding available for overwriting.")
         if model_args.merge_lora:
             model.merge_adapter(adapter_name)
         else:

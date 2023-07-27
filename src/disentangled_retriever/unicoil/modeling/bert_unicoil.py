@@ -16,14 +16,13 @@ class BertUnicoil(BertAdapterModel):
             *input_ids.size(), self.config.vocab_size, 
             dtype=tok_weights.dtype, device=tok_weights.device
         )
-        vocab_emb = torch.scatter(vocab_emb, dim=-1, index=input_ids.unsqueeze(-1), src=tok_weights)        
+        vocab_emb = torch.scatter(vocab_emb, dim=-1, index=input_ids.unsqueeze(-1), src=tok_weights)
         vocab_emb = torch.max(vocab_emb, dim=1).values
         vocab_emb[:, [0, 101, 102, 103]] *= 0 # mask tokens: pad, unk, cls, sep
-        if return_dict:
-            outputs.logits = vocab_emb
-            return outputs
-        else:
+        if not return_dict:
             return vocab_emb
+        outputs.logits = vocab_emb
+        return outputs
     
     def add_pooling_layer(self, head_name):
         self.add_tagging_head(head_name, num_labels=1, layers=1)

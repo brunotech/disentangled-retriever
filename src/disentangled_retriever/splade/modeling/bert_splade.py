@@ -12,11 +12,10 @@ class BertSplade(BertForMaskedLM):
             return_dict = True,
         )
         vocab_emb, _ = torch.max(torch.log(1 + torch.relu(outputs.logits)) * attention_mask.unsqueeze(-1), dim=1)
-        if return_dict:
-            outputs.logits = vocab_emb
-            return outputs
-        else:
+        if not return_dict:
             return vocab_emb
+        outputs.logits = vocab_emb
+        return outputs
 
 
 def test_output():

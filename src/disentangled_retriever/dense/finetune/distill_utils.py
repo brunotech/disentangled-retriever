@@ -58,12 +58,11 @@ class FinetuneCollator:
         doc_input['position_ids'] = torch.arange(0, doc_input['input_ids'].size(1))[None, :]
         # equals the number of docs
         ce_scores = torch.tensor([x['ce_scores'] for x in features])
-        batch_data = {
-                "query_input": query_input,
-                "doc_input": doc_input,
-                "ce_scores": ce_scores,
+        return {
+            "query_input": query_input,
+            "doc_input": doc_input,
+            "ce_scores": ce_scores,
         }
-        return batch_data
 
 
 class QDRelDataset(Dataset):
@@ -79,13 +78,13 @@ class QDRelDataset(Dataset):
             verbose=True):
         super().__init__()
         self.tokenizer = tokenizer
-        self.queries, qid2offset = [], dict()
+        self.queries, qid2offset = [], {}
         for idx, line in enumerate(tqdm(open(query_path), disable=not verbose, mininterval=10, desc="load queries")):
             qid, query = line.split("\t")
             qid2offset[qid] = idx
             self.queries.append(query.strip())
 
-        self.corpus, docid2offset = [], dict()
+        self.corpus, docid2offset = [], {}
         for idx, line in enumerate(tqdm(open(corpus_path), disable=not verbose, mininterval=10, desc="load corpus")):
             splits = line.split("\t")
             if len(splits) == 2:
@@ -141,13 +140,7 @@ class QDRelDataset(Dataset):
         docs = [self.corpus[docid] for docid in docids]
         scores_dict = self.ce_scores[qid]
         scores = [scores_dict[docid] for docid in docids]
-        # scores = [0.0 for docid in docids] # for debug
-        data = {
-            "query": query,
-            "docs": docs,
-            "ce_scores": scores
-        }
-        return data
+        return {"query": query, "docs": docs, "ce_scores": scores}
 
 
 class BaseDistillDenseFinetuner:
@@ -175,8 +168,7 @@ class BaseDistillDenseFinetuner:
         all_tensors = [torch.empty_like(t) for _ in range(dist.get_world_size())]
         dist.all_gather(all_tensors, t)
         all_tensors[self.args.local_rank] = t
-        cat_tensors = torch.cat(all_tensors)
-        return cat_tensors
+        return torch.cat(all_tensors)
 
     def _compute_inbatch_contrast_loss(self, query_embeds, doc_embeds):
         """

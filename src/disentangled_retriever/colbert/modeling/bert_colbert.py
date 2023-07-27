@@ -14,10 +14,7 @@ class ColBERT(BertAdapterModel):
         outputs.logits = torch.nn.functional.normalize(outputs.logits, p=2, dim=2)
         outputs.logits *= attention_mask[:, :, None].float()
         # TODO The original implememntation of ColBERT also masks punctuations for docs. Necessary?
-        if return_dict:
-            return outputs
-        else:
-            return outputs.logits
+        return outputs if return_dict else outputs.logits
     
     def add_pooling_layer(self, head_name, out_dim):
         self.add_tagging_head(head_name, num_labels=out_dim, layers=1)

@@ -61,7 +61,6 @@ def load_or_encode_query(model, tokenizer, query_path, out_query_dir, data_args,
     out_query_path = os.path.join(out_query_dir, "query.jsonl")
     if (not eval_args.overwrite_output_dir) and os.path.exists(out_query_path):
         logger.info("Load pre-computed query representations")
-        return out_query_path
     else:
         queries = load_queries(query_path)
         encode_unicoil_text(
@@ -74,7 +73,8 @@ def load_or_encode_query(model, tokenizer, query_path, out_query_dir, data_args,
             split_corpus_num=math.ceil(len(queries)/100_000),
             verbose=is_main_process(eval_args.local_rank)
         )
-        return out_query_path
+
+    return out_query_path
 
 
 def load_or_encode_corpus(model, tokenizer, data_args, eval_args):
