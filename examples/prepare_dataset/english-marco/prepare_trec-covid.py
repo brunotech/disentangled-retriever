@@ -9,15 +9,10 @@ from typing import Tuple, Dict, List
 
 def concat_title_body(doc: Dict[str, str]):
     body = doc['text'].strip()
-    if "title" in doc and len(doc['title'].strip())> 0:
-        title = doc['title'].strip()
-        if title[-1] in "!.?。！？":
-            text = title + " " + body
-        else:
-            text = title + ". " + body
-    else:
-        text = body
-    return text
+    if "title" not in doc or len(doc['title'].strip()) <= 0:
+        return body
+    title = doc['title'].strip()
+    return f"{title} {body}" if title[-1] in "!.?。！？" else f"{title}. {body}"
 
 
 class GenericDataLoader:
@@ -27,10 +22,10 @@ class GenericDataLoader:
         self.corpus = {}
         self.queries = {}
         self.qrels = {}
-        
+
         if prefix:
-            query_file = prefix + "-" + query_file
-            qrels_folder = prefix + "-" + qrels_folder
+            query_file = f"{prefix}-{query_file}"
+            qrels_folder = f"{prefix}-{qrels_folder}"
 
         self.corpus_file = os.path.join(data_folder, corpus_file) if data_folder else corpus_file
         self.query_file = os.path.join(data_folder, query_file) if data_folder else query_file
@@ -40,34 +35,34 @@ class GenericDataLoader:
     @staticmethod
     def check(fIn: str, ext: str):
         if not os.path.exists(fIn):
-            raise ValueError("File {} not present! Please provide accurate file.".format(fIn))
-        
+            raise ValueError(f"File {fIn} not present! Please provide accurate file.")
+
         if not fIn.endswith(ext):
-            raise ValueError("File {} must be present with extension {}".format(fIn, ext))
+            raise ValueError(f"File {fIn} must be present with extension {ext}")
 
     def load(self, split="test") -> Tuple[Dict[str, Dict[str, str]], Dict[str, str], Dict[str, Dict[str, int]]]:
         
-        self.qrels_file = os.path.join(self.qrels_folder, split + ".tsv")
+        self.qrels_file = os.path.join(self.qrels_folder, f"{split}.tsv")
         self.check(fIn=self.corpus_file, ext="jsonl")
         self.check(fIn=self.query_file, ext="jsonl")
         self.check(fIn=self.qrels_file, ext="tsv")
-        
+
         if not len(self.corpus):
             print("Loading Corpus...")
             self._load_corpus()
             print("Loaded %d %s Documents.", len(self.corpus), split.upper())
             print("Doc Example: %s", list(self.corpus.values())[0])
-        
+
         if not len(self.queries):
             print("Loading Queries...")
             self._load_queries()
-        
+
         if os.path.exists(self.qrels_file):
             self._load_qrels()
             self.queries = {qid: self.queries[qid] for qid in self.qrels}
             print("Loaded %d %s Queries.", len(self.queries), split.upper())
             print("Query Example: %s", list(self.queries.values())[0])
-        
+
         return self.corpus, self.queries, self.qrels
     
     def load_corpus(self) -> Dict[str, Dict[str, str]]:
@@ -83,8 +78,8 @@ class GenericDataLoader:
         return self.corpus
     
     def _load_corpus(self):
-    
-        num_lines = sum(1 for i in open(self.corpus_file, 'rb'))
+
+        num_lines = sum(1 for _ in open(self.corpus_file, 'rb'))
         with open(self.corpus_file, encoding='utf8') as fIn:
             for line in tqdm(fIn, total=num_lines):
                 line = json.loads(line)
@@ -105,10 +100,10 @@ class GenericDataLoader:
         reader = csv.reader(open(self.qrels_file, encoding="utf-8"), 
                             delimiter="\t", quoting=csv.QUOTE_MINIMAL)
         next(reader)
-        
-        for id, row in enumerate(reader):
+
+        for row in reader:
             query_id, corpus_id, score = row[0], row[1], int(row[2])
-            
+
             if query_id not in self.qrels:
                 self.qrels[query_id] = {corpus_id: score}
             else:
@@ -123,12 +118,12 @@ def main(input_dir, output_dir):
     with open(os.path.join(output_dir, "corpus.tsv"), 'w') as f:
         for pid, content in concat_corpus.items():
             f.write(f"{pid}\t{content.strip()}\n")
-    
+
     with open(os.path.join(output_dir, 'qrels.test'), 'w') as f:
         for qid, score_dict in qrels.items():
             for pid, rel in score_dict.items():
-                f.write(f"{qid}\t{0}\t{pid}\t{rel}\n")
-    
+                f.write(f"{qid}\t0\t{pid}\t{rel}\n")
+
     with open(os.path.join(output_dir, "query.test"), 'w') as f:
         for qid, content in queries.items():
             f.write(f"{qid}\t{content.strip()}\n")

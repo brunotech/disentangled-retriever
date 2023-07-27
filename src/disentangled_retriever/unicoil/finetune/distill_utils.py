@@ -44,8 +44,7 @@ class BaseDistillUnicoilFinetuner:
         all_tensors = [torch.empty_like(t) for _ in range(dist.get_world_size())]
         dist.all_gather(all_tensors, t)
         all_tensors[self.args.local_rank] = t
-        cat_tensors = torch.cat(all_tensors)
-        return cat_tensors
+        return torch.cat(all_tensors)
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """

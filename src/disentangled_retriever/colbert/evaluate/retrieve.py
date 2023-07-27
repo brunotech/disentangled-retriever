@@ -82,8 +82,12 @@ def get_parts(directory):
     assert list(range(len(parts))) == parts, parts
 
     # Integer-sortedness matters.
-    parts_paths = [os.path.join(directory, '{}{}'.format(filename, extension)) for filename in parts]
-    samples_paths = [os.path.join(directory, '{}.sample'.format(filename)) for filename in parts]
+    parts_paths = [
+        os.path.join(directory, f'{filename}{extension}') for filename in parts
+    ]
+    samples_paths = [
+        os.path.join(directory, f'{filename}.sample') for filename in parts
+    ]
 
     return parts, parts_paths, samples_paths
 
@@ -166,7 +170,7 @@ class FaissIndex():
         for offset in range(0, Q_faiss.size(0), faiss_bsize):
             endpos = min(offset + faiss_bsize, Q_faiss.size(0))
 
-            print_message("#> Searching from {} to {}...".format(offset, endpos), condition=verbose)
+            print_message(f"#> Searching from {offset} to {endpos}...", condition=verbose)
 
             some_Q_faiss = Q_faiss[offset:endpos].float().numpy()
             _, some_embedding_ids = self.faiss_index.search(some_Q_faiss, faiss_depth)
@@ -238,14 +242,20 @@ class IndexRanker():
         return views
 
     def _create_buffers(self, max_bsize, dtype, devices):
-        buffers = {}
-
-        for device in devices:
-            buffers[device] = [torch.zeros(max_bsize, stride, self.dim, dtype=dtype,
-                                           device=device, pin_memory=(device == 'cpu'))
-                               for stride in self.strides]
-
-        return buffers
+        return {
+            device: [
+                torch.zeros(
+                    max_bsize,
+                    stride,
+                    self.dim,
+                    dtype=dtype,
+                    device=device,
+                    pin_memory=(device == 'cpu'),
+                )
+                for stride in self.strides
+            ]
+            for device in devices
+        }
 
     def rank(self, Q, pids, views=None, shift=0):
         assert len(pids) > 0
@@ -339,7 +349,7 @@ class IndexRanker():
 
             for batch_idx, offset in enumerate(range(0, len(pids), self.bsize)):
                 if batch_idx % 100 == 0:
-                    print_message("#> Processing batch #{}..".format(batch_idx))
+                    print_message(f"#> Processing batch #{batch_idx}..")
 
                 endpos = offset + self.bsize
                 batch_query_index, batch_pids = query_indexes[offset:endpos], pids[offset:endpos]
@@ -370,8 +380,12 @@ class IndexPart():
         # Load doclens metadata
         all_doclens = load_doclens(directory, flatten=False)
 
-        self.doc_offset = sum([len(part_doclens) for part_doclens in all_doclens[:first_part]])
-        self.doc_endpos = sum([len(part_doclens) for part_doclens in all_doclens[:last_part]])
+        self.doc_offset = sum(
+            len(part_doclens) for part_doclens in all_doclens[:first_part]
+        )
+        self.doc_endpos = sum(
+            len(part_doclens) for part_doclens in all_doclens[:last_part]
+        )
         self.pids_range = range(self.doc_offset, self.doc_endpos)
 
         self.parts_doclens = all_doclens[first_part:last_part]
@@ -411,9 +425,7 @@ class IndexPart():
         assert all(pid in self.pids_range for pid in pids), self.pids_range
 
         pids_ = [pid - self.doc_offset for pid in pids]
-        scores = self.ranker.rank(Q, pids_)
-
-        return scores
+        return self.ranker.rank(Q, pids_)
 
     def batch_rank(self, all_query_embeddings, query_indexes, pids, sorted_pids):
         """
@@ -424,9 +436,9 @@ class IndexPart():
         assert ((pids >= self.pids_range.start) & (pids < self.pids_range.stop)).sum() == pids.size(0)
 
         pids_ = pids - self.doc_offset
-        scores = self.ranker.batch_rank(all_query_embeddings, query_indexes, pids_, sorted_pids)
-
-        return scores
+        return self.ranker.batch_rank(
+            all_query_embeddings, query_indexes, pids_, sorted_pids
+        )
 
 
 class Ranker():
@@ -443,9 +455,9 @@ class Ranker():
     def encode(self, queries):
         assert type(queries) in [list, tuple], type(queries)
 
-        Q = self.inference.queryFromText(queries, bsize=512 if len(queries) > 512 else None)
-
-        return Q
+        return self.inference.queryFromText(
+            queries, bsize=512 if len(queries) > 512 else None
+        )
 
     def rank(self, Q, pids=None):
         pids = self.retrieve(Q, verbose=False)[0] if pids is None else pids

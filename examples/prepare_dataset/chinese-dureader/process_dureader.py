@@ -12,13 +12,13 @@ def get_text_id(text):
 def concat_title_body(title, body, sep_token):
     title = title.strip()
     if len(title)> 0:
-        if title[-1] in ",，!.?。！？":
-            text = title + " " + body
-        else:
-            text = title + sep_token + body
+        return (
+            f"{title} {body}"
+            if title[-1] in ",，!.?。！？"
+            else title + sep_token + body
+        )
     else:
-        text = body
-    return text
+        return body
 
 
 def main_rel_passage():

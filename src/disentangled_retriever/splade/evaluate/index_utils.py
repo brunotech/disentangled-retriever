@@ -35,7 +35,7 @@ class SpladeEvaluater(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        assert prediction_loss_only == False
+        assert not prediction_loss_only
         assert ignore_keys is None
         inputs = self._prepare_inputs(inputs)
         with torch.no_grad():
@@ -64,11 +64,10 @@ def encode_sparse_text(
         else:
             save_path = f"{encoded_save_path}/corpus.jsonl.{eval_args.local_rank}"
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        collection_file = open(save_path, "w")
-        for lines in iter(saver_queue.get, None):
-            for line in lines:
-                collection_file.write(line)
-        collection_file.close()
+        with open(save_path, "w") as collection_file:
+            for lines in iter(saver_queue.get, None):
+                for line in lines:
+                    collection_file.write(line)
 
     thread = threading.Thread(target=_saver_thread)
     thread.start()
@@ -84,7 +83,7 @@ def encode_sparse_text(
     else:
         logger.info("Use len(str.split()) to sort the corpus for efficiently encoding")
         corpus_ids = np.array(sorted(corpus_ids.tolist(), key=lambda k: len(corpus[k].split()), reverse=True))
-    
+
     vocab_dict = tokenizer.get_vocab()
     vocab_dict = {v: k for k, v in vocab_dict.items()}
 
@@ -108,7 +107,7 @@ def encode_sparse_text(
         for rep, id_ in zip(outputs.predictions, text_ids):
             idx = np.nonzero(rep)
             data = rep[idx]
-            dict_splade = dict()
+            dict_splade = {}
             for id_token, value_token in zip(idx[0],data):
                 if value_token > 0:
                     real_token = vocab_dict[id_token]
@@ -138,7 +137,7 @@ def encode_sparse_text(
 
     if encode_is_qry and eval_args.local_rank == 0:
         with open(encoded_save_path, 'w') as outfile:
-            for fname in list(f"{encoded_save_path}.{i}" for i in range(eval_args.world_size)):
+            for fname in [f"{encoded_save_path}.{i}" for i in range(eval_args.world_size)]:
                 with open(fname) as infile:
                     for line in infile:
                         outfile.write(line)

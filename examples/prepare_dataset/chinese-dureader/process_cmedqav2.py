@@ -14,13 +14,13 @@ def format_corpus():
 
 def format_train():
     qrels = defaultdict(set)
-    f = open(os.path.join(input_dir, f"train_candidates.txt"))
+    f = open(os.path.join(input_dir, "train_candidates.txt"))
     f.readline()
     for line in f:
         qid, ansid, _ = line.split(",")
         qrels[qid].add(ansid)
-    
-    f = open(os.path.join(input_dir, f"question.csv"))
+
+    f = open(os.path.join(input_dir, "question.csv"))
     f.readline()
     with open(os.path.join(output_dir, "query.train"), 'w') as query_output, \
             open(os.path.join(output_dir, "qrels.train"), 'w') as qrel_output:
@@ -35,7 +35,7 @@ def format_train():
 
 def format_test_queries(mode):
     assert mode in ["dev", "test"]
-    
+
     qrels = defaultdict(set)
     f = open(os.path.join(input_dir, f"{mode}_candidates.txt"))
     f.readline()
@@ -43,8 +43,8 @@ def format_test_queries(mode):
         qid, ansid, _, rel = line.split(",")
         if int(rel) > 0:
             qrels[qid].add(ansid)
-    
-    f = open(os.path.join(input_dir, f"question.csv"))
+
+    f = open(os.path.join(input_dir, "question.csv"))
     f.readline()
     with open(os.path.join(output_dir, f"query.{mode}"), 'w') as query_output, \
             open(os.path.join(output_dir, f"qrels.{mode}"), 'w') as qrel_output:

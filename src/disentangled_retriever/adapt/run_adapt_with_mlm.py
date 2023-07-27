@@ -53,14 +53,15 @@ class CorpusDataset(Dataset):
             text = self.corpus[item]
             cache_input_ids = self.tokenizer(text, add_special_tokens=False, return_attention_mask=False, return_token_type_ids=False)['input_ids']
             self.corpus[item] = np.array(cache_input_ids, dtype=np.uint16) # cache
-        
+
         input_ids = self.corpus[item].tolist()
         if len(input_ids) > self.max_token_len:
             start_pos = random.randint(0, len(input_ids)-self.max_token_len)
             input_ids = input_ids[start_pos: start_pos + self.max_token_len]
-        
-        batch_encoding = self.tokenizer.prepare_for_model(input_ids, add_special_tokens=True, return_special_tokens_mask=True)
-        return batch_encoding
+
+        return self.tokenizer.prepare_for_model(
+            input_ids, add_special_tokens=True, return_special_tokens_mask=True
+        )
 
 
 def read_corpus(file_path, verbose):
@@ -98,7 +99,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if is_main_process(training_args.local_rank) else logging.WARN,
     )
-    
+
     resume_from_checkpoint = False
     if (
             os.path.exists(training_args.output_dir)
@@ -119,8 +120,10 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        (
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
+        )
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
@@ -135,7 +138,7 @@ def main():
     config = AutoConfig.from_pretrained(model_args.model_name_or_path)
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, config=config, use_fast=False)
     model = AutoModelForMaskedLM.from_pretrained(model_args.model_name_or_path, config=config)
-        
+
     train_set = CorpusDataset(
         read_corpus(data_args.corpus_path, verbose=is_main_process(training_args.local_rank)),
         tokenizer, data_args.max_seq_length

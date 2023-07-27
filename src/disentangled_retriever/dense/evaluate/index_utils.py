@@ -17,11 +17,10 @@ def load_corpus(corpus_path, verbose=True):
     corpus = {}
     for line in tqdm(open(corpus_path), mininterval=10, disable=not verbose):
         splits = line.split("\t")
-        if len(splits) == 2:
-            corpus_id, text = splits
-            corpus[corpus_id] = text.strip()
-        else:  
+        if len(splits) != 2:
             raise NotImplementedError()
+        corpus_id, text = splits
+        corpus[corpus_id] = text.strip()
     return corpus
 
 
@@ -77,7 +76,7 @@ class Evaluater(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        assert prediction_loss_only == False
+        assert not prediction_loss_only
         assert ignore_keys is None
         inputs = self._prepare_inputs(inputs)
         text_ids = inputs['text_ids']
@@ -98,7 +97,7 @@ class DenseEvaluater(Trainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        assert prediction_loss_only == False
+        assert not prediction_loss_only
         assert ignore_keys is None
         inputs = self._prepare_inputs(inputs)
         with torch.no_grad():
@@ -212,12 +211,7 @@ def create_index(corpus_embeds: np.ndarray, single_gpu_id=None):
 
 def concat_title_body(doc: Dict[str, str]):
     body = doc['text'].strip()
-    if "title" in doc and len(doc['title'].strip())> 0:
-        title = doc['title'].strip()
-        if title[-1] in "!.?。！？":
-            text = title + " " + body
-        else:
-            text = title + ". " + body
-    else:
-        text = body
-    return text
+    if "title" not in doc or len(doc['title'].strip()) <= 0:
+        return body
+    title = doc['title'].strip()
+    return f"{title} {body}" if title[-1] in "!.?。！？" else f"{title}. {body}"

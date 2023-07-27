@@ -34,7 +34,7 @@ def validate_during_training(trainer, eval_dataset = None,
     fp16, bf16 = trainer.args.fp16, trainer.args.bf16
     trainer.args.fp16, trainer.args.bf16 = False, False
     dataloader_drop_last, trainer.args.dataloader_drop_last = trainer.args.dataloader_drop_last, False
-    disable_tqdm, trainer.args.disable_tqdm = trainer.args.disable_tqdm, True 
+    disable_tqdm, trainer.args.disable_tqdm = trainer.args.disable_tqdm, True
     logging_level = transformers.utils.logging.get_verbosity()
     get_process_log_level, trainer.args.get_process_log_level = trainer.args.get_process_log_level, lambda: transformers.logging.WARNING
     corpus_embeds, corpus_ids = encode_dense_corpus(corpus, trainer.model, trainer.tokenizer, trainer.args, math.ceil(len(corpus)/100_000), return_embeds=True, verbose=is_main_process(trainer.args.local_rank))
@@ -46,7 +46,7 @@ def validate_during_training(trainer, eval_dataset = None,
     trainer.args.get_process_log_level = get_process_log_level
 
     torch.cuda.empty_cache()
-    index = create_index(corpus_embeds, 0 if trainer.args.local_rank < 0 else trainer.args.local_rank)
+    index = create_index(corpus_embeds, max(trainer.args.local_rank, 0))
     all_topk_scores, all_topk_ids = batch_dense_search(
         query_ids, query_embeds,
         corpus_ids, index, 
@@ -55,7 +55,7 @@ def validate_during_training(trainer, eval_dataset = None,
 
     run_results = defaultdict(dict)
     for qid, topk_scores, topk_ids in zip(query_ids, all_topk_scores, all_topk_ids):
-        for i, (score, docid) in enumerate(zip(topk_scores, topk_ids)):
+        for score, docid in zip(topk_scores, topk_ids):
             run_results[qid.item()][docid.item()] = score.item()
     metrics = {}
     for category, cat_metrics in pytrec_evaluate(
@@ -68,5 +68,5 @@ def validate_during_training(trainer, eval_dataset = None,
             metrics[f"{metric_key_prefix}_{metric}"] = score
     torch.cuda.empty_cache()
     trainer.log(metrics)
-    
+
     return metrics

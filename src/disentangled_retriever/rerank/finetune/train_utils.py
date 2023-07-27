@@ -33,16 +33,15 @@ class RerankFinetuneCollator:
     def __call__(self, features: List[List[Tuple[str]]]) -> Dict[str, Any]:
         # tokenizing batch of text is much faster
         features = sum(features, [])
-        input_dict = self.tokenizer(
+        return self.tokenizer(
             features,
             padding=True,
             return_tensors='pt',
             add_special_tokens=True,
             return_attention_mask=True,
             truncation=True,
-            max_length=self.max_seq_len
+            max_length=self.max_seq_len,
         )
-        return input_dict
 
 
 class TrainRerankDataset(Dataset):
@@ -56,13 +55,13 @@ class TrainRerankDataset(Dataset):
             verbose=True):
         super().__init__()
         self.tokenizer = tokenizer
-        self.queries, qid2offset = [], dict()
+        self.queries, qid2offset = [], {}
         for idx, line in enumerate(tqdm(open(query_path), disable=not verbose, mininterval=10, desc="load queries")):
             qid, query = line.split("\t")
             qid2offset[qid] = idx
             self.queries.append(query.strip())
 
-        self.corpus, docid2offset = [], dict()
+        self.corpus, docid2offset = [], {}
         for idx, line in enumerate(tqdm(open(corpus_path), disable=not verbose, mininterval=10, desc="load corpus")):
             splits = line.split("\t")
             if len(splits) == 2:
@@ -81,7 +80,7 @@ class TrainRerankDataset(Dataset):
                 self.qrels[qoffset].append(docoffset)
         self.qrels = dict(self.qrels)
 
-        self.negs = dict()
+        self.negs = {}
         if candidate_path is not None:
             for line in tqdm(open(candidate_path), disable=not verbose, mininterval=10, desc="load negs"):
                 qid, pids = line.split("\t")
@@ -120,8 +119,7 @@ class TrainRerankDataset(Dataset):
                 neg_docids = random.sample(candidate_negs, self.neg_per_query)
             else:
                 neg_docids = candidate_negs + random.sample(range(len(self.corpus)), self.neg_per_query-len(candidate_negs))
-        data = [(query, self.corpus[docid]) for docid in [rel_docid]+neg_docids]
-        return data
+        return [(query, self.corpus[docid]) for docid in [rel_docid]+neg_docids]
 
 
 def load_validation_set(corpus_path, query_path, candidate_path, qrel_path):
@@ -157,7 +155,7 @@ def validate_during_training(trainer, eval_dataset = None,
     run_results = defaultdict(dict)
 
     for qid, pid_list in scores_dict.items():
-        for i, (docid, score) in enumerate(pid_list):
+        for docid, score in pid_list:
             run_results[qid][docid] = score
     metrics = {}
     for category, cat_metrics in pytrec_evaluate(
@@ -171,7 +169,7 @@ def validate_during_training(trainer, eval_dataset = None,
             metrics[f"{metric_key_prefix}_{metric}"] = score
     torch.cuda.empty_cache()
     trainer.log(metrics)
-    
+
     return metrics
 
 

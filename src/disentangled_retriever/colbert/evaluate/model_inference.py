@@ -3,11 +3,10 @@ from tqdm import tqdm
 
 
 def _split_into_batches(ids, mask, bsize):
-    batches = []
-    for offset in range(0, ids.size(0), bsize):
-        batches.append((ids[offset:offset+bsize], mask[offset:offset+bsize]))
-
-    return batches
+    return [
+        (ids[offset : offset + bsize], mask[offset : offset + bsize])
+        for offset in range(0, ids.size(0), bsize)
+    ]
 
 
 def _sort_by_length(ids, mask, bsize):
@@ -35,11 +34,7 @@ def tensorize_queries(tokenizer, batch_text, max_query_len, bsize=None):
 
     ids, mask = obj['input_ids'], obj['attention_mask']
 
-    if bsize:
-        batches = _split_into_batches(ids, mask, bsize)
-        return batches
-
-    return ids, mask
+    return _split_into_batches(ids, mask, bsize) if bsize else (ids, mask)
 
 
 def tensorize_docs(tokenizer, batch_text, max_doc_len, bsize=None):
@@ -117,8 +112,8 @@ class ModelInference():
 
 
 def _stack_3D_tensors(groups):
-    bsize = sum([x.size(0) for x in groups])
-    maxlen = max([x.size(1) for x in groups])
+    bsize = sum(x.size(0) for x in groups)
+    maxlen = max(x.size(1) for x in groups)
     hdim = groups[0].size(2)
 
     output = torch.zeros(bsize, maxlen, hdim, device=groups[0].device, dtype=groups[0].dtype)

@@ -20,8 +20,7 @@ class RobertaDense(RobertaAdapterModel):
             similarity_metric = similarity_metric, 
             pooling = pooling,
         )
-        if return_dict:
-            outputs.embedding = text_embeds
-            return outputs
-        else:
+        if not return_dict:
             return text_embeds
+        outputs.embedding = text_embeds
+        return outputs

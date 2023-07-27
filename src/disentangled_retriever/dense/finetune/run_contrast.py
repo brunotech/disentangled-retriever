@@ -86,7 +86,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if is_main_process(training_args.local_rank) else logging.WARN,
     )
-    
+
     resume_from_checkpoint = False
     if (
             os.path.exists(training_args.output_dir)
@@ -107,8 +107,10 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        (
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {training_args.local_rank != -1}, 16-bits training: {training_args.fp16}"
+        )
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
@@ -124,7 +126,7 @@ def main():
 
     config = AutoConfig.from_pretrained(model_args.model_name_or_path)
     config.similarity_metric = model_args.similarity_metric
-    config.pooling = model_args.pooling    
+    config.pooling = model_args.pooling
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path, 
         config = config
@@ -179,7 +181,7 @@ def main():
             data_args.valid_query_path,
             data_args.valid_qrel_path,
         )
-    
+
     # Initialize our Trainer
     trainer = trainer_class(
         qrels=train_set.get_qrels(),
